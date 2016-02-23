@@ -4,12 +4,13 @@ var fs   = require('fs');
 var util = require('util');
 var map  = require('mout/object/map');
 
-var passthru = require('nyks/child_process/passthru');
+var exec     = require('nyks/child_process/exec');
 var sprintf  = require('nyks/string/sprintf');
 var mask     = require('nyks/object/mask');
 
 
 function openssl(/*verb, [ flags, [tail, ]] chain*/) {
+
     var args   = [].slice.call(arguments),
         verb   = args.shift(),
         chain  = args.pop(),
@@ -25,8 +26,7 @@ function openssl(/*verb, [ flags, [tail, ]] chain*/) {
     if(tail.length)
       tail.push.apply(args, tail); //lol
 
-    console.log("Calling openssl", args.join(" "), chain.toString());
-    passthru("openssl", args, chain);
+    exec("openssl", args, chain);
 };
 
 

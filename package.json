@@ -21,6 +21,6 @@
   "homepage": "https://github.com/131/node-openssl",
   "dependencies": {
     "mout": "^0.11.1",
-    "nyks": "^2.8.0"
+    "nyks": "^2.9.0"
   }
 }
