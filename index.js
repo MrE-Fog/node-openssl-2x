@@ -1,45 +1,70 @@
-"use strict";
+'use strict';
+const fs = require('fs');
+const { exec } = require('child_process');
 
-var fs   = require('fs');
-var util = require('util');
-var map  = require('mout/object/map');
+function openssl(args) {
+  return new Promise(function execPrimiseHandler(resolve, reject) {
+    var verb, flags, tail;
 
-var exec     = require('nyks/child_process/exec');
-var sprintf  = require('nyks/string/sprintf');
-var mask     = require('nyks/object/mask');
+    switch (args.length) {
+      case 1:
+        args = args[0].split(' ').filter((elem) => elem.length);
+        verb = args.shift();
+        flags = args.join(' ');
+        break;
+      case 3:
+        verb = args[0];
+        flags = args[1];
+        if (!Array.isArray(flags) && typeof flags === 'string') {
+          flags = flags.split('-').filter((elem) => elem.length);
+          flags.forEach((elem, index) => {
+            flags[index] = `-${elem}`;
+          });
+        }
+        if (!Array.isArray(flags)) {
+          reject(
+            new Error(
+              `Second argument must be an array or string of command flags.`,
+            ),
+          );
+        }
+        flags = flags.join(' ');
+        tail = args[2];
+        if (typeof tail !== 'string' || typeof tail !== 'number') {
+          reject(
+            new Error(`Third argument must be a string or number argument.`),
+          );
+        }
+        if (typeof tail === 'number') {
+          tail = tail.toString();
+        }
+        break;
+      default:
+        reject(
+          new Error(
+            `Command and arguments are required. Either as one argument string or three (3) arguments.`,
+          ),
+        );
+    }
 
-
-function openssl(/*verb, [ flags, [tail, ]] chain*/) {
-
-    var args   = [].slice.call(arguments),
-        verb   = args.shift(),
-        chain  = args.pop(),
-        flags  = args.shift() || {},
-        tail   = args.shift() || [];
-
-    args = [verb];
-    map(flags, function(v, k){
-      args.push(util.format("-%s", k));
-      if(v !== null)
-        args.push(v);
+    var stdout = '';
+    var stderr = '';
+    const cp = exec(`openssl ${verb} ${flags}`);
+    cp.stdout.on('data', (data) => {
+      stdout += data;
     });
-    if(tail.length)
-      tail.push.apply(args, tail); //lol
 
-    exec("openssl", args, chain);
-};
+    cp.stderr.on('data', (data) => {
+      stderr += data;
+    });
 
-
-
-function config(config, config_path){
-  var config_str  =  mask(map(config, function(v, s){
-    return mask(v, "%s=%s", "\r\n");
-  }), "[ %s ]\r\n%s", "\r\n");
-
-
-  fs.writeFileSync(config_path, config_str);
+    cp.on('close', (code) => {
+      resolve({ stdout, stderr });
+    });
+    cp.on('error', (err) => {
+      reject(err);
+    });
+  });
 }
 
-
 module.exports = openssl;
-module.exports.config = config;
