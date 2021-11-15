@@ -1,55 +1,44 @@
 'use strict';
+const util = require('util');
 const fs = require('fs');
 const { exec } = require('child_process');
 
-function openssl(args) {
-  return new Promise(function execPrimiseHandler(resolve, reject) {
-    var verb, flags, tail;
+const debug = util.debuglog('node-openssl');
 
-    switch (args.length) {
-      case 1:
-        args = args[0].split(' ').filter((elem) => elem.length);
-        verb = args.shift();
-        flags = args.join(' ');
-        break;
-      case 3:
-        verb = args[0];
-        flags = args[1];
-        if (!Array.isArray(flags) && typeof flags === 'string') {
-          flags = flags.split('-').filter((elem) => elem.length);
-          flags.forEach((elem, index) => {
-            flags[index] = `-${elem}`;
-          });
-        }
-        if (!Array.isArray(flags)) {
-          reject(
-            new Error(
-              `Second argument must be an array or string of command flags.`,
-            ),
-          );
-        }
-        flags = flags.join(' ');
-        tail = args[2];
-        if (typeof tail !== 'string' || typeof tail !== 'number') {
-          reject(
-            new Error(`Third argument must be a string or number argument.`),
-          );
-        }
-        if (typeof tail === 'number') {
-          tail = tail.toString();
-        }
-        break;
-      default:
-        reject(
-          new Error(
-            `Command and arguments are required. Either as one argument string or three (3) arguments.`,
-          ),
-        );
+function openssl() {
+  const opts = arguments[0];
+  var { verb, flags, tail } = opts;
+  debug(`> openssl`);
+  debug(`Found ${Object.keys(opts).length} properties.`);
+  return new Promise(function execPromiseHandler(resolve, reject) {
+    if (typeof flags !== 'string' || Array.isArray(flags)) {
+      reject(
+        new Error(
+          `'flags' option must be an array or string of openssl ${verb} command flags.`,
+        ),
+      );
+    }
+
+    if (Array.isArray(flags)) {
+      flags = flags.join(' ');
+    }
+
+    if (
+      typeof tail !== 'undefined' &&
+      typeof tail !== 'string' &&
+      typeof tail !== 'number'
+    ) {
+      reject(new Error(`'tail' option must be a string or number argument.`));
+      if (typeof tail === 'number') {
+        tail = tail.toString();
+      }
     }
 
     var stdout = '';
     var stderr = '';
-    const cp = exec(`openssl ${verb} ${flags}`);
+    const command = `openssl ${verb} ${flags} ${tail}`;
+    debug(`Executing: ${command}`);
+    const cp = exec(command);
     cp.stdout.on('data', (data) => {
       stdout += data;
     });
@@ -59,7 +48,8 @@ function openssl(args) {
     });
 
     cp.on('close', (code) => {
-      resolve({ stdout, stderr });
+      debug(`< openssl`);
+      resolve({ cwd: process.cwd(), stdout, stderr });
     });
     cp.on('error', (err) => {
       reject(err);
