@@ -1,45 +1,60 @@
-"use strict";
+'use strict';
+const util = require('util');
+const fs = require('fs');
+const { exec } = require('child_process');
 
-var fs   = require('fs');
-var util = require('util');
-var map  = require('mout/object/map');
+const debug = util.debuglog('node-openssl');
 
-var exec     = require('nyks/child_process/exec');
-var sprintf  = require('nyks/string/sprintf');
-var mask     = require('nyks/object/mask');
+function openssl() {
+  const opts = arguments[0];
+  var { verb, flags, tail } = opts;
+  debug(`> openssl`);
+  debug(`Found ${Object.keys(opts).length} properties.`);
+  return new Promise(function execPromiseHandler(resolve, reject) {
+    if (typeof flags !== 'string' || Array.isArray(flags)) {
+      reject(
+        new Error(
+          `'flags' option must be an array or string of openssl ${verb} command flags.`,
+        ),
+      );
+    }
 
+    if (Array.isArray(flags)) {
+      flags = flags.join(' ');
+    }
 
-function openssl(/*verb, [ flags, [tail, ]] chain*/) {
+    if (
+      typeof tail !== 'undefined' &&
+      typeof tail !== 'string' &&
+      typeof tail !== 'number'
+    ) {
+      reject(new Error(`'tail' option must be a string or number argument.`));
+      if (typeof tail === 'number') {
+        tail = tail.toString();
+      }
+    }
 
-    var args   = [].slice.call(arguments),
-        verb   = args.shift(),
-        chain  = args.pop(),
-        flags  = args.shift() || {},
-        tail   = args.shift() || [];
-
-    args = [verb];
-    map(flags, function(v, k){
-      args.push(util.format("-%s", k));
-      if(v !== null)
-        args.push(v);
+    var stdout = '';
+    var stderr = '';
+    const command = `openssl ${verb} ${flags} ${tail}`;
+    debug(`Executing: ${command}`);
+    const cp = exec(command);
+    cp.stdout.on('data', (data) => {
+      stdout += data;
     });
-    if(tail.length)
-      tail.push.apply(args, tail); //lol
 
-    exec("openssl", args, chain);
-};
+    cp.stderr.on('data', (data) => {
+      stderr += data;
+    });
 
-
-
-function config(config, config_path){
-  var config_str  =  mask(map(config, function(v, s){
-    return mask(v, "%s=%s", "\r\n");
-  }), "[ %s ]\r\n%s", "\r\n");
-
-
-  fs.writeFileSync(config_path, config_str);
+    cp.on('close', (code) => {
+      debug(`< openssl`);
+      resolve({ cwd: process.cwd(), stdout, stderr });
+    });
+    cp.on('error', (err) => {
+      reject(err);
+    });
+  });
 }
 
-
 module.exports = openssl;
-module.exports.config = config;

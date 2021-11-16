@@ -1,6 +1,6 @@
 {
   "name": "openssl",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Nodejs openssl wrapper",
   "main": "index.js",
   "scripts": {
@@ -13,14 +13,11 @@
   "keywords": [
     "openssl"
   ],
-  "author": "Francois Leurent <131.js@cloudyks.org>",
+  "author": "Robert Burcknr <rbu@millabs.net>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/131/node-openssl/issues"
   },
   "homepage": "https://github.com/131/node-openssl",
-  "dependencies": {
-    "mout": "^0.11.1",
-    "nyks": "^2.9.0"
-  }
+  "dependencies": {}
 }
